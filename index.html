@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Neocities — Stats Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#0b0e14; --panel:#11161f; --panel2:#161c28; --line:#222b3a;
+    --text:#e6edf3; --muted:#8b97a7; --accent:#5ad1c4; --accent2:#7aa2ff; --warn:#ffb86b;
+    --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:var(--sans);line-height:1.5}
+  header{padding:28px 24px 8px;border-bottom:1px solid var(--line)}
+  h1{margin:0;font-size:20px;letter-spacing:.04em}
+  h1 .accent{color:var(--accent)}
+  .sub{color:var(--muted);font-size:13px;margin-top:4px;font-family:var(--mono)}
+  main{max-width:1100px;margin:0 auto;padding:24px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+  .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .kpi .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
+  .kpi .value{font-size:26px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
+  .kpi .delta{font-size:12px;margin-top:4px;font-family:var(--mono)}
+  .delta.up{color:var(--accent)} .delta.flat{color:var(--muted)} .delta.down{color:var(--warn)}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  @media(max-width:760px){.grid{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .card h2{margin:0 0 12px;font-size:14px;font-weight:600;color:var(--muted);letter-spacing:.04em}
+  canvas{width:100%!important}
+  .meta{color:var(--muted);font-size:12px;font-family:var(--mono);margin-top:24px;border-top:1px solid var(--line);padding-top:14px}
+  .tag{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:11px;margin:2px 4px 2px 0;font-family:var(--mono)}
+  .err{background:#2a1620;border:1px solid #5a2b3a;color:#ffb3c6;padding:14px 16px;border-radius:10px;font-family:var(--mono);font-size:13px}
+  a{color:var(--accent2)}
+</style>
+</head>
+<body>
+<header>
+  <h1>neocities <span class="accent">// stats</span></h1>
+  <div class="sub" id="siteline">loading…</div>
+</header>
+<main>
+  <div id="error"></div>
+  <div class="kpis" id="kpis"></div>
+  <div class="grid">
+    <div class="card"><h2>Всего просмотров (views)</h2><canvas id="cViews" height="220"></canvas></div>
+    <div class="card"><h2>Просмотры в день (дельта)</h2><canvas id="cViewsDelta" height="220"></canvas></div>
+    <div class="card"><h2>Всего обращений (hits)</h2><canvas id="cHits" height="220"></canvas></div>
+    <div class="card"><h2>Hits в день (дельта)</h2><canvas id="cHitsDelta" height="220"></canvas></div>
+    <div class="card"><h2>Размер сайта (МБ)</h2><canvas id="cSize" height="220"></canvas></div>
+    <div class="card"><h2>Кол-во файлов</h2><canvas id="cFiles" height="220"></canvas></div>
+  </div>
+  <div class="meta" id="meta"></div>
+</main>
+
+<script>
+// ===== CONFIG =====
+// Where to load the snapshots from.
+//  - Hosting on GitHub Pages (same repo): leave as "data/stats.json".
+//  - Hosting on Neocities / anywhere else: point to the raw GitHub URL,
+//    which DOES send CORS headers, e.g.:
+//    "https://raw.githubusercontent.com/<user>/<repo>/main/data/stats.json"
+const STATS_URL = "data/stats.json";
+// ==================
+
+const nf = new Intl.NumberFormat("ru-RU");
+const fmt = n => (n==null ? "—" : nf.format(n));
+const mb = b => (b==null ? null : +(b/1048576).toFixed(2));
+
+function deltaTag(curr, prev){
+  if(prev==null||curr==null) return "";
+  const d = curr-prev;
+  const cls = d>0?"up":d<0?"down":"flat";
+  const sign = d>0?"+":"";
+  return `<div class="delta ${cls}">${sign}${fmt(d)} с прошлого снимка</div>`;
+}
+
+const baseOpts = {
+  responsive:true,
+  plugins:{legend:{display:false}},
+  scales:{
+    x:{ticks:{color:"#8b97a7",maxRotation:0,autoSkip:true,maxTicksLimit:8},grid:{color:"#1b2230"}},
+    y:{ticks:{color:"#8b97a7"},grid:{color:"#1b2230"},beginAtZero:true}
+  }
+};
+
+function lineChart(id,labels,data,color,fill){
+  return new Chart(document.getElementById(id),{
+    type:"line",
+    data:{labels,datasets:[{data,borderColor:color,backgroundColor:fill||(color+"22"),
+      fill:!!fill,tension:.25,pointRadius:2,borderWidth:2}]},
+    options:baseOpts
+  });
+}
+function barChart(id,labels,data,color){
+  return new Chart(document.getElementById(id),{
+    type:"bar",
+    data:{labels,datasets:[{data,backgroundColor:color}]},
+    options:baseOpts
+  });
+}
+
+function deltas(arr){
+  return arr.map((v,i)=> i===0||v==null||arr[i-1]==null ? null : Math.max(0, v-arr[i-1]));
+}
+
+(async function(){
+  let hist;
+  try{
+    const r = await fetch(STATS_URL, {cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    hist = await r.json();
+  }catch(e){
+    document.getElementById("error").innerHTML =
+      `<div class="err">Не удалось загрузить ${STATS_URL} — ${e.message}.<br>`+
+      `Если хостишь не на GitHub Pages, пропиши в STATS_URL raw-ссылку GitHub.</div>`;
+    return;
+  }
+  if(!Array.isArray(hist) || hist.length===0){
+    document.getElementById("error").innerHTML =
+      `<div class="err">Снапшотов пока нет. Запусти workflow вручную (Actions → Run workflow) или дождись cron.</div>`;
+    return;
+  }
+
+  const labels = hist.map(s => (s.ts||"").slice(0,10));
+  const views  = hist.map(s => s.views ?? null);
+  const hits   = hist.map(s => s.hits ?? null);
+  const sizes  = hist.map(s => mb(s.total_bytes));
+  const files  = hist.map(s => s.file_count ?? null);
+  const last = hist[hist.length-1], prev = hist[hist.length-2]||{};
+
+  document.getElementById("siteline").textContent =
+    `${last.sitename||""} · ${(last.domain||last.sitename+".neocities.org")} · обновлено ${(last.ts||"").replace("T"," ").replace("Z"," UTC")}`;
+
+  const kpis = [
+    {label:"Views", value:fmt(last.views), d:deltaTag(last.views,prev.views)},
+    {label:"Hits",  value:fmt(last.hits),  d:deltaTag(last.hits,prev.hits)},
+  ];
+  if(last.file_count!=null) kpis.push({label:"Файлов", value:fmt(last.file_count), d:deltaTag(last.file_count,prev.file_count)});
+  if(last.total_bytes!=null) kpis.push({label:"Размер", value:mb(last.total_bytes)+" МБ", d:""});
+  kpis.push({label:"Снимков", value:fmt(hist.length), d:""});
+  document.getElementById("kpis").innerHTML = kpis.map(k=>
+    `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value}</div>${k.d}</div>`
+  ).join("");
+
+  lineChart("cViews", labels, views, "#5ad1c4", "#5ad1c422");
+  barChart("cViewsDelta", labels, deltas(views), "#5ad1c4");
+  lineChart("cHits", labels, hits, "#7aa2ff", "#7aa2ff22");
+  barChart("cHitsDelta", labels, deltas(hits), "#7aa2ff");
+  if(sizes.some(v=>v!=null)) lineChart("cSize", labels, sizes, "#ffb86b", "#ffb86b22");
+  if(files.some(v=>v!=null)) lineChart("cFiles", labels, files, "#c792ea", "#c792ea22");
+
+  const tags = (last.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join("");
+  document.getElementById("meta").innerHTML =
+    `создан: ${last.created_at||"—"}<br>теги: ${tags||"—"}<br>`+
+    `источник: ${STATS_URL} · встроенная статистика Neocities хранит только 30 дней — здесь история копится вечно.`;
+})();
+</script>
+</body>
+</html>
