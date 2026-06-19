@@ -9,6 +9,7 @@
   :root{
     --bg:#0b0e14; --panel:#11161f; --panel2:#161c28; --line:#222b3a;
     --text:#e6edf3; --muted:#8b97a7; --accent:#5ad1c4; --accent2:#7aa2ff; --warn:#ffb86b;
+    --purple:#c792ea; --pink:#ff8bd0;
     --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
     --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
@@ -19,20 +20,27 @@
   h1 .accent{color:var(--accent)}
   .sub{color:var(--muted);font-size:13px;margin-top:4px;font-family:var(--mono)}
   main{max-width:1100px;margin:0 auto;padding:24px}
-  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin-bottom:24px}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:24px}
   .kpi{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
   .kpi .label{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.08em}
-  .kpi .value{font-size:26px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
+  .kpi .value{font-size:24px;font-weight:600;margin-top:6px;font-variant-numeric:tabular-nums}
   .kpi .delta{font-size:12px;margin-top:4px;font-family:var(--mono)}
   .delta.up{color:var(--accent)} .delta.flat{color:var(--muted)} .delta.down{color:var(--warn)}
   .grid{display:grid;grid-template-columns:1fr 1fr;gap:18px}
   @media(max-width:760px){.grid{grid-template-columns:1fr}}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
   .card h2{margin:0 0 12px;font-size:14px;font-weight:600;color:var(--muted);letter-spacing:.04em}
+  .card.full{margin-top:18px}
   canvas{width:100%!important}
+  table{width:100%;border-collapse:collapse;font-family:var(--mono);font-size:12px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.06em;font-size:11px}
+  td.num{text-align:right;font-variant-numeric:tabular-nums}
+  .bar{height:6px;border-radius:4px;background:var(--accent2);margin-top:4px}
   .meta{color:var(--muted);font-size:12px;font-family:var(--mono);margin-top:24px;border-top:1px solid var(--line);padding-top:14px}
   .tag{display:inline-block;background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 10px;font-size:11px;margin:2px 4px 2px 0;font-family:var(--mono)}
   .err{background:#2a1620;border:1px solid #5a2b3a;color:#ffb3c6;padding:14px 16px;border-radius:10px;font-family:var(--mono);font-size:13px}
+  .hint{background:#16202a;border:1px solid #234055;color:#9ad;padding:12px 14px;border-radius:10px;font-family:var(--mono);font-size:12px;margin-bottom:18px}
   a{color:var(--accent2)}
 </style>
 </head>
@@ -43,14 +51,23 @@
 </header>
 <main>
   <div id="error"></div>
+  <div id="filehint"></div>
   <div class="kpis" id="kpis"></div>
   <div class="grid">
     <div class="card"><h2>Всего просмотров (views)</h2><canvas id="cViews" height="220"></canvas></div>
     <div class="card"><h2>Просмотры в день (дельта)</h2><canvas id="cViewsDelta" height="220"></canvas></div>
     <div class="card"><h2>Всего обращений (hits)</h2><canvas id="cHits" height="220"></canvas></div>
     <div class="card"><h2>Hits в день (дельта)</h2><canvas id="cHitsDelta" height="220"></canvas></div>
+    <div class="card"><h2>Просмотры/день · среднее за 7 дней</h2><canvas id="cViews7" height="220"></canvas></div>
+    <div class="card"><h2>Hits / Views · вовлечённость</h2><canvas id="cEngage" height="220"></canvas></div>
     <div class="card"><h2>Размер сайта (МБ)</h2><canvas id="cSize" height="220"></canvas></div>
     <div class="card"><h2>Кол-во файлов</h2><canvas id="cFiles" height="220"></canvas></div>
+    <div class="card"><h2>Типы файлов · количество</h2><canvas id="cExtCount" height="220"></canvas></div>
+    <div class="card"><h2>Типы файлов · размер</h2><canvas id="cExtSize" height="220"></canvas></div>
+  </div>
+  <div class="card full" id="largestCard" style="display:none">
+    <h2>Топ файлов по размеру</h2>
+    <table id="largestTable"><thead><tr><th>файл</th><th class="num">размер</th></tr></thead><tbody></tbody></table>
   </div>
   <div class="meta" id="meta"></div>
 </main>
@@ -66,8 +83,17 @@ const STATS_URL = "data/stats.json";
 // ==================
 
 const nf = new Intl.NumberFormat("ru-RU");
+const nf1 = new Intl.NumberFormat("ru-RU",{maximumFractionDigits:1});
 const fmt = n => (n==null ? "—" : nf.format(n));
 const mb = b => (b==null ? null : +(b/1048576).toFixed(2));
+const PALETTE = ["#5ad1c4","#7aa2ff","#ffb86b","#c792ea","#ff8bd0","#9ece6a","#f7768e","#7dcfff","#e0af68","#bb9af7","#73daca","#b4f9f8"];
+
+function humanBytes(b){
+  if(b==null) return "—";
+  const u=["B","KB","MB","GB"]; let i=0, n=b;
+  while(n>=1024 && i<u.length-1){ n/=1024; i++; }
+  return nf1.format(n)+" "+u[i];
+}
 
 function deltaTag(curr, prev){
   if(prev==null||curr==null) return "";
@@ -85,6 +111,10 @@ const baseOpts = {
     y:{ticks:{color:"#8b97a7"},grid:{color:"#1b2230"},beginAtZero:true}
   }
 };
+const doughnutOpts = {
+  responsive:true,
+  plugins:{legend:{position:"right",labels:{color:"#8b97a7",boxWidth:12,font:{size:11}}}}
+};
 
 function lineChart(id,labels,data,color,fill){
   return new Chart(document.getElementById(id),{
@@ -101,10 +131,25 @@ function barChart(id,labels,data,color){
     options:baseOpts
   });
 }
+function doughnutChart(id,labels,data){
+  return new Chart(document.getElementById(id),{
+    type:"doughnut",
+    data:{labels,datasets:[{data,backgroundColor:labels.map((_,i)=>PALETTE[i%PALETTE.length]),borderColor:"#11161f",borderWidth:2}]},
+    options:doughnutOpts
+  });
+}
 
 function deltas(arr){
   return arr.map((v,i)=> i===0||v==null||arr[i-1]==null ? null : Math.max(0, v-arr[i-1]));
 }
+function movingAvg(arr, win){
+  return arr.map((_,i)=>{
+    const slice = arr.slice(Math.max(0,i-win+1), i+1).filter(v=>v!=null);
+    if(!slice.length) return null;
+    return +(slice.reduce((a,b)=>a+b,0)/slice.length).toFixed(2);
+  });
+}
+function parseDate(s){ const d = new Date(s); return isNaN(d) ? null : d; }
 
 (async function(){
   let hist;
@@ -129,28 +174,72 @@ function deltas(arr){
   const hits   = hist.map(s => s.hits ?? null);
   const sizes  = hist.map(s => mb(s.total_bytes));
   const files  = hist.map(s => s.file_count ?? null);
+  const engage = hist.map(s => (s.views ? +(s.hits/s.views).toFixed(2) : null));
   const last = hist[hist.length-1], prev = hist[hist.length-2]||{};
+  const first = hist[0];
+  const hasFiles = sizes.some(v=>v!=null) || files.some(v=>v!=null);
 
   document.getElementById("siteline").textContent =
     `${last.sitename||""} · ${(last.domain||last.sitename+".neocities.org")} · обновлено ${(last.ts||"").replace("T"," ").replace("Z"," UTC")}`;
 
+  // ---- derived KPI helpers ----
+  const daySpan = Math.max(1, (parseDate(last.ts) - parseDate(first.ts)) / 86400000);
+  const avgViewsDay = (last.views!=null && first.views!=null) ? (last.views-first.views)/daySpan : null;
+  const avgHitsDay  = (last.hits!=null && first.hits!=null) ? (last.hits-first.hits)/daySpan : null;
+  const created = parseDate(last.created_at);
+  const ageDays = created ? Math.round((Date.now()-created)/86400000) : null;
+  const ratio = (last.views ? last.hits/last.views : null);
+
   const kpis = [
     {label:"Views", value:fmt(last.views), d:deltaTag(last.views,prev.views)},
     {label:"Hits",  value:fmt(last.hits),  d:deltaTag(last.hits,prev.hits)},
+    {label:"Hits / View", value: ratio!=null ? nf1.format(ratio) : "—", d:""},
+    {label:"Views/день (avg)", value: avgViewsDay!=null ? nf1.format(avgViewsDay) : "—", d:""},
+    {label:"Hits/день (avg)", value: avgHitsDay!=null ? nf1.format(avgHitsDay) : "—", d:""},
   ];
   if(last.file_count!=null) kpis.push({label:"Файлов", value:fmt(last.file_count), d:deltaTag(last.file_count,prev.file_count)});
-  if(last.total_bytes!=null) kpis.push({label:"Размер", value:mb(last.total_bytes)+" МБ", d:""});
-  kpis.push({label:"Снимков", value:fmt(hist.length), d:""});
+  if(last.total_bytes!=null) kpis.push({label:"Размер", value:mb(last.total_bytes)+" МБ", d:deltaTag(mb(last.total_bytes),mb(prev.total_bytes))});
+  if(ageDays!=null) kpis.push({label:"Возраст сайта", value:fmt(ageDays)+" д", d:""});
+  kpis.push({label:"Дней в логе", value:fmt(hist.length), d:""});
   document.getElementById("kpis").innerHTML = kpis.map(k=>
     `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value}</div>${k.d}</div>`
   ).join("");
+
+  // hint when file stats are missing (no API key)
+  if(!hasFiles){
+    document.getElementById("filehint").innerHTML =
+      `<div class="hint">Размер / кол-во файлов / типы файлов пусты: в снимках нет этих данных. `+
+      `Добавь секрет <b>NEOCITIES_API_KEY</b> в GitHub Actions и перезапусти workflow.</div>`;
+  }
 
   lineChart("cViews", labels, views, "#5ad1c4", "#5ad1c422");
   barChart("cViewsDelta", labels, deltas(views), "#5ad1c4");
   lineChart("cHits", labels, hits, "#7aa2ff", "#7aa2ff22");
   barChart("cHitsDelta", labels, deltas(hits), "#7aa2ff");
+  lineChart("cViews7", labels, movingAvg(deltas(views),7), "#9ece6a", "#9ece6a22");
+  lineChart("cEngage", labels, engage, "#ff8bd0", "#ff8bd022");
+
   if(sizes.some(v=>v!=null)) lineChart("cSize", labels, sizes, "#ffb86b", "#ffb86b22");
   if(files.some(v=>v!=null)) lineChart("cFiles", labels, files, "#c792ea", "#c792ea22");
+
+  // ---- file-type doughnuts from latest snapshot ----
+  if(last.files_by_ext && Object.keys(last.files_by_ext).length){
+    const entries = Object.entries(last.files_by_ext);
+    const byCount = [...entries].sort((a,b)=>b[1].count-a[1].count).slice(0,12);
+    const bySize  = [...entries].sort((a,b)=>b[1].bytes-a[1].bytes).slice(0,12);
+    doughnutChart("cExtCount", byCount.map(e=>"."+e[0]), byCount.map(e=>e[1].count));
+    doughnutChart("cExtSize",  bySize.map(e=>"."+e[0]),  bySize.map(e=>+(e[1].bytes/1048576).toFixed(3)));
+  }
+
+  // ---- largest files table ----
+  if(Array.isArray(last.largest_files) && last.largest_files.length){
+    const max = last.largest_files[0].bytes || 1;
+    document.getElementById("largestCard").style.display = "block";
+    document.querySelector("#largestTable tbody").innerHTML = last.largest_files.map(f=>
+      `<tr><td>${f.path}<div class="bar" style="width:${Math.max(2,(f.bytes/max*100)).toFixed(0)}%"></div></td>`+
+      `<td class="num">${humanBytes(f.bytes)}</td></tr>`
+    ).join("");
+  }
 
   const tags = (last.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join("");
   document.getElementById("meta").innerHTML =
