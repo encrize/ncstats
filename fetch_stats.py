@@ -61,6 +61,11 @@ def _ext_of(path: str) -> str:
     return "(none)"
 
 
+def _folder_of(path: str) -> str:
+    """Top-level folder for a file path, or '(root)' for files at the site root."""
+    return path.split("/", 1)[0] if "/" in path else "(root)"
+
+
 def fetch_files(api_key: str) -> dict:
     """Returns file stats + per-extension breakdown + largest files, or {} on failure."""
     try:
@@ -83,6 +88,13 @@ def fetch_files(api_key: str) -> dict:
         bucket["count"] += 1
         bucket["bytes"] += int(f.get("size", 0))
 
+    by_folder: dict[str, dict] = {}
+    for f in files:
+        fold = _folder_of(f.get("path", ""))
+        bucket = by_folder.setdefault(fold, {"count": 0, "bytes": 0})
+        bucket["count"] += 1
+        bucket["bytes"] += int(f.get("size", 0))
+
     largest = sorted(
         ({"path": f.get("path", ""), "bytes": int(f.get("size", 0))} for f in files),
         key=lambda x: x["bytes"],
@@ -94,6 +106,7 @@ def fetch_files(api_key: str) -> dict:
         "total_bytes": total,
         "last_file_update": max(updates) if updates else None,
         "files_by_ext": by_ext,
+        "files_by_folder": by_folder,
         "largest_files": largest,
     }
 

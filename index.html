@@ -42,12 +42,15 @@
   .err{background:#2a1620;border:1px solid #5a2b3a;color:#ffb3c6;padding:14px 16px;border-radius:10px;font-family:var(--mono);font-size:13px}
   .hint{background:#16202a;border:1px solid #234055;color:#9ad;padding:12px 14px;border-radius:10px;font-family:var(--mono);font-size:12px;margin-bottom:18px}
   a{color:var(--accent2)}
+  .btn{margin-top:10px;background:var(--panel2);color:var(--text);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-family:var(--mono);font-size:12px;cursor:pointer}
+  .btn:hover{border-color:var(--accent)}
 </style>
 </head>
 <body>
 <header>
   <h1>neocities <span class="accent">// stats</span></h1>
   <div class="sub" id="siteline">loading…</div>
+  <button id="csvBtn" class="btn" style="display:none">↓ Экспорт CSV</button>
 </header>
 <main>
   <div id="error"></div>
@@ -64,6 +67,8 @@
     <div class="card"><h2>Кол-во файлов</h2><canvas id="cFiles" height="220"></canvas></div>
     <div class="card"><h2>Типы файлов · количество</h2><canvas id="cExtCount" height="220"></canvas></div>
     <div class="card"><h2>Типы файлов · размер</h2><canvas id="cExtSize" height="220"></canvas></div>
+    <div class="card"><h2>Папки · размер (МБ)</h2><canvas id="cFolderSize" height="220"></canvas></div>
+    <div class="card"><h2>Папки · кол-во файлов</h2><canvas id="cFolderCount" height="220"></canvas></div>
   </div>
   <div class="card full" id="largestCard" style="display:none">
     <h2>Топ файлов по размеру</h2>
@@ -231,6 +236,15 @@ function parseDate(s){ const d = new Date(s); return isNaN(d) ? null : d; }
     doughnutChart("cExtSize",  bySize.map(e=>"."+e[0]),  bySize.map(e=>+(e[1].bytes/1048576).toFixed(3)));
   }
 
+  // ---- folder breakdown from latest snapshot ----
+  if(last.files_by_folder && Object.keys(last.files_by_folder).length){
+    const fe = Object.entries(last.files_by_folder);
+    const fSize  = [...fe].sort((a,b)=>b[1].bytes-a[1].bytes).slice(0,12);
+    const fCount = [...fe].sort((a,b)=>b[1].count-a[1].count).slice(0,12);
+    doughnutChart("cFolderSize",  fSize.map(e=>e[0]),  fSize.map(e=>+(e[1].bytes/1048576).toFixed(3)));
+    doughnutChart("cFolderCount", fCount.map(e=>e[0]), fCount.map(e=>e[1].count));
+  }
+
   // ---- largest files table ----
   if(Array.isArray(last.largest_files) && last.largest_files.length){
     const max = last.largest_files[0].bytes || 1;
@@ -245,6 +259,22 @@ function parseDate(s){ const d = new Date(s); return isNaN(d) ? null : d; }
   document.getElementById("meta").innerHTML =
     `создан: ${last.created_at||"—"}<br>теги: ${tags||"—"}<br>`+
     `источник: ${STATS_URL} · встроенная статистика Neocities хранит только 30 дней — здесь история копится вечно.`;
+
+  // ---- CSV export of the full snapshot history ----
+  const vd = deltas(views), hd = deltas(hits);
+  const csvBtn = document.getElementById("csvBtn");
+  csvBtn.style.display = "inline-block";
+  csvBtn.onclick = () => {
+    const rows = [["date","views","hits","views_delta","hits_delta","total_bytes","file_count"]];
+    hist.forEach((s,i)=> rows.push([labels[i], s.views??"", s.hits??"", vd[i]??"", hd[i]??"", s.total_bytes??"", s.file_count??""]));
+    const csv = rows.map(r=>r.join(",")).join("\n");
+    const blob = new Blob(["\ufeff"+csv], {type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `neocities-stats-${(last.ts||"").slice(0,10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+  };
 })();
 </script>
 </body>
