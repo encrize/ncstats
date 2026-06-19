@@ -1,6 +1,6 @@
 [
   {
-    "ts": "2026-06-19T10:09:26Z",
+    "ts": "2026-06-19T10:19:14Z",
     "sitename": "jaryq",
     "views": 217116,
     "hits": 508252,
@@ -13,9 +13,9 @@
       "2000s"
     ],
     "created_at": "Wed, 31 Dec 2025 13:02:25 -0000",
-    "last_updated": "Fri, 19 Jun 2026 10:09:10 -0000",
+    "last_updated": "Fri, 19 Jun 2026 10:18:19 -0000",
     "file_count": 178,
-    "total_bytes": 10669745,
+    "total_bytes": 10669744,
     "last_file_update": "Wed, 31 Dec 2025 13:02:25 -0000",
     "files_by_ext": {
       "png": {
@@ -64,7 +64,33 @@
       },
       "json": {
         "count": 2,
-        "bytes": 435
+        "bytes": 434
+      }
+    },
+    "files_by_folder": {
+      "Gallery": {
+        "count": 29,
+        "bytes": 6793302
+      },
+      "MainResources": {
+        "count": 82,
+        "bytes": 2938898
+      },
+      "(root)": {
+        "count": 29,
+        "bytes": 740370
+      },
+      "css": {
+        "count": 10,
+        "bytes": 49784
+      },
+      "js": {
+        "count": 20,
+        "bytes": 122845
+      },
+      "moons": {
+        "count": 8,
+        "bytes": 24545
       }
     },
     "largest_files": [
