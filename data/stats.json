@@ -683,5 +683,142 @@
         "bytes": 217551
       }
     ]
+  },
+  {
+    "ts": "2026-06-24T01:23:17Z",
+    "sitename": "jaryq",
+    "views": 223366,
+    "hits": 526335,
+    "domain": null,
+    "tags": [
+      "blog",
+      "tech",
+      "windows",
+      "dev",
+      "2000s"
+    ],
+    "created_at": "Wed, 31 Dec 2025 13:02:25 -0000",
+    "last_updated": "Sat, 20 Jun 2026 09:37:03 -0000",
+    "file_count": 178,
+    "total_bytes": 10669744,
+    "last_file_update": "Wed, 31 Dec 2025 13:02:25 -0000",
+    "files_by_ext": {
+      "png": {
+        "count": 76,
+        "bytes": 2069594
+      },
+      "jpg": {
+        "count": 39,
+        "bytes": 7606047
+      },
+      "gif": {
+        "count": 5,
+        "bytes": 513529
+      },
+      "jpeg": {
+        "count": 1,
+        "bytes": 1869
+      },
+      "html": {
+        "count": 20,
+        "bytes": 286276
+      },
+      "css": {
+        "count": 10,
+        "bytes": 49784
+      },
+      "ico": {
+        "count": 1,
+        "bytes": 4286
+      },
+      "md": {
+        "count": 1,
+        "bytes": 2687
+      },
+      "js": {
+        "count": 20,
+        "bytes": 122845
+      },
+      "txt": {
+        "count": 2,
+        "bytes": 10723
+      },
+      "xml": {
+        "count": 1,
+        "bytes": 1670
+      },
+      "json": {
+        "count": 2,
+        "bytes": 434
+      }
+    },
+    "files_by_folder": {
+      "Gallery": {
+        "count": 29,
+        "bytes": 6793302
+      },
+      "MainResources": {
+        "count": 82,
+        "bytes": 2938898
+      },
+      "(root)": {
+        "count": 29,
+        "bytes": 740370
+      },
+      "css": {
+        "count": 10,
+        "bytes": 49784
+      },
+      "js": {
+        "count": 20,
+        "bytes": 122845
+      },
+      "moons": {
+        "count": 8,
+        "bytes": 24545
+      }
+    },
+    "largest_files": [
+      {
+        "path": "Gallery/cat_on_tree.jpg",
+        "bytes": 1525258
+      },
+      {
+        "path": "Gallery/night_sea_vibe.jpg",
+        "bytes": 842471
+      },
+      {
+        "path": "Gallery/night_vibe.jpg",
+        "bytes": 551999
+      },
+      {
+        "path": "Gallery/iphone6_1.jpg",
+        "bytes": 512038
+      },
+      {
+        "path": "png.png",
+        "bytes": 405315
+      },
+      {
+        "path": "Gallery/iphone6_3.jpg",
+        "bytes": 358663
+      },
+      {
+        "path": "Gallery/iphone6_2.jpg",
+        "bytes": 304643
+      },
+      {
+        "path": "MainResources/jaryqOS.png",
+        "bytes": 278470
+      },
+      {
+        "path": "MainResources/mainCover_1.png",
+        "bytes": 263727
+      },
+      {
+        "path": "MainResources/misc/mybg.gif",
+        "bytes": 217551
+      }
+    ]
   }
 ]
