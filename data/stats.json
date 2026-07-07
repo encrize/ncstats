@@ -1012,5 +1012,21 @@
     ],
     "created_at": "Wed, 31 Dec 2025 13:02:25 -0000",
     "last_updated": "Wed, 01 Jul 2026 10:06:31 -0000"
+  },
+  {
+    "ts": "2026-07-07T01:14:17Z",
+    "sitename": "jaryq",
+    "views": 257306,
+    "hits": 594328,
+    "domain": null,
+    "tags": [
+      "blog",
+      "tech",
+      "windows",
+      "dev",
+      "2000s"
+    ],
+    "created_at": "Wed, 31 Dec 2025 13:02:25 -0000",
+    "last_updated": "Wed, 01 Jul 2026 10:06:31 -0000"
   }
 ]
