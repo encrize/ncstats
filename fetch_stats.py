@@ -136,7 +136,7 @@ def main() -> int:
         try:
             history = json.loads(OUT.read_text("utf-8"))
         except json.JSONDecodeError:
-            print("[warn] stats.json was corrupt; starting fresh", file=sys.stderr)
+            print("[warn] stats.json was corrupt; starting fresh1", file=sys.stderr)
 
     # De-dupe: skip if the same calendar day already has an identical views/hits reading.
     today = snapshot["ts"][:10]
