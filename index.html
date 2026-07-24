@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Neocities — Stats Dashboard</title>
+<title>Dashboard — Stats</title>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
   :root{
@@ -48,7 +48,7 @@
 </head>
 <body>
 <header>
-  <h1>neocities <span class="accent">// stats</span></h1>
+  <h1>website <span class="accent">// stats</span></h1>
   <div class="sub" id="siteline"></div>
   <button id="csvBtn" class="btn" style="display:none">↓ Экспорт CSV</button>
 </header>
@@ -78,14 +78,7 @@
 </main>
 
 <script>
-// ===== CONFIG =====
-// Where to load the snapshots from.
-//  - Hosting on GitHub Pages (same repo): leave as "data/stats.json".
-//  - Hosting on Neocities / anywhere else: point to the raw GitHub URL,
-//    which DOES send CORS headers, e.g.:
-//    "https://raw.githubusercontent.com/<user>/<repo>/main/data/stats.json"
 const STATS_URL = "data/stats.json";
-// ==================
 
 const nf = new Intl.NumberFormat("ru-RU");
 const nf1 = new Intl.NumberFormat("ru-RU",{maximumFractionDigits:1});
@@ -164,13 +157,12 @@ function parseDate(s){ const d = new Date(s); return isNaN(d) ? null : d; }
     hist = await r.json();
   }catch(e){
     document.getElementById("error").innerHTML =
-      `<div class="err">Не удалось загрузить ${STATS_URL} — ${e.message}.<br>`+
-      `Если хостишь не на GitHub Pages, пропиши в STATS_URL raw-ссылку GitHub.</div>`;
+      `<div class="err">Не удалось загрузить данные — ${e.message}.</div>`;
     return;
   }
   if(!Array.isArray(hist) || hist.length===0){
     document.getElementById("error").innerHTML =
-      `<div class="err">Снапшотов пока нет. Запусти workflow вручную (Actions → Run workflow) или дождись cron.</div>`;
+      `<div class="err">Снапшотов пока нет.</div>`;
     return;
   }
 
@@ -184,8 +176,10 @@ function parseDate(s){ const d = new Date(s); return isNaN(d) ? null : d; }
   const first = hist[0];
   const hasFiles = sizes.some(v=>v!=null) || files.some(v=>v!=null);
 
-  document.getElementById("siteline").textContent =
-    `${last.sitename||""} · ${(last.domain||last.sitename+".neocities.org")} · обновлено ${(last.ts||"").replace("T"," ").replace("Z"," UTC")}`;
+  const sitelineEl = document.getElementById("siteline");
+  if(sitelineEl){
+    sitelineEl.textContent = `обновлено ${(last.ts||"").replace("T"," ").replace("Z"," UTC")}`;
+  }
 
   // ---- derived KPI helpers ----
   const daySpan = Math.max(1, (parseDate(last.ts) - parseDate(first.ts)) / 86400000);
@@ -209,13 +203,6 @@ function parseDate(s){ const d = new Date(s); return isNaN(d) ? null : d; }
   document.getElementById("kpis").innerHTML = kpis.map(k=>
     `<div class="kpi"><div class="label">${k.label}</div><div class="value">${k.value}</div>${k.d}</div>`
   ).join("");
-
-  // hint when file stats are missing (no API key)
-  if(!hasFiles){
-    document.getElementById("filehint").innerHTML =
-      `<div class="hint">Размер / кол-во файлов / типы файлов пусты: в снимках нет этих данных. `+
-      `Добавь секрет <b>NEOCITIES_API_KEY</b> в GitHub Actions и перезапусти workflow.</div>`;
-  }
 
   lineChart("cViews", labels, views, "#5ad1c4", "#5ad1c422");
   barChart("cViewsDelta", labels, deltas(views), "#5ad1c4");
@@ -257,10 +244,9 @@ function parseDate(s){ const d = new Date(s); return isNaN(d) ? null : d; }
 
   const tags = (last.tags||[]).map(t=>`<span class="tag">#${t}</span>`).join("");
   document.getElementById("meta").innerHTML =
-    `создан: ${last.created_at||"—"}<br>теги: ${tags||"—"}<br>`+
-    `источник: ${STATS_URL} · встроенная статистика Neocities хранит только 30 дней — здесь история копится вечно.`;
+    `создан: ${last.created_at||"—"}<br>теги: ${tags||"—"}`;
 
-  // ---- CSV export of the full snapshot history ----
+  // ---- CSV export ----
   const vd = deltas(views), hd = deltas(hits);
   const csvBtn = document.getElementById("csvBtn");
   csvBtn.style.display = "inline-block";
@@ -271,7 +257,7 @@ function parseDate(s){ const d = new Date(s); return isNaN(d) ? null : d; }
     const blob = new Blob(["\ufeff"+csv], {type:"text/csv;charset=utf-8"});
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
-    a.download = `neocities-stats-${(last.ts||"").slice(0,10)}.csv`;
+    a.download = `stats-export-${(last.ts||"").slice(0,10)}.csv`;
     document.body.appendChild(a); a.click(); a.remove();
     URL.revokeObjectURL(a.href);
   };
