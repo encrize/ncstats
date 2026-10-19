@@ -2490,5 +2490,19 @@
     ],
     "created_at": "Wed, 31 Dec 2025 13:02:25 -0000",
     "last_updated": "Wed, 12 Aug 2026 10:50:04 -0000"
+  },
+  {
+    "ts": "2026-10-19T01:27:22Z",
+    "views": 385553,
+    "hits": 903982,
+    "tags": [
+      "blog",
+      "tech",
+      "windows",
+      "dev",
+      "2000s"
+    ],
+    "created_at": "Wed, 31 Dec 2025 13:02:25 -0000",
+    "last_updated": "Wed, 12 Aug 2026 10:50:04 -0000"
   }
 ]
